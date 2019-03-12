@@ -4,15 +4,15 @@
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
-#define MAX_NUM_VARS 3		// Max number of declared variables allowed
-#define MAX_VAR_NAME_LEN 3 // How long a variable name can be
+#define MAX_NUM_VARS 2			// Max number of declared variables allowed
+#define MAX_VAR_NAME_LEN 20 	// How long a variable name can be
 
-int yylex(void);		// Will be generated in lex.yy.c by flex
-void yyerror(char *);	// Following are defined below in sub-routines section
-void assign_var_value(char *, int);
+int yylex(void);						// Will be generated in lex.yy.c by flex
+void yyerror(char *);					// Following are defined below in sub-routines section
+int var_assignemnt(char *, int);
 int get_var_value(char *);
-int create_var(char *var_name);
-
+int create_var(char *);
+void print_var_create_error(int);
 
 struct variable {
 	char name[MAX_VAR_NAME_LEN + 1];	// Allocate space for max var name + \0
@@ -60,8 +60,7 @@ infix :
 statement:
 	expr					{ printf("=%d\n", $1); }
 	| VARIABLE '=' expr		{
-							  assign_var_value($1, $3);
-							  printf("=%d\n", get_var_value($1));
+							  printf("=%d\n", var_assignemnt($1, $3));
 							  free($1); // Must free the strdup string
 							}
 	;
@@ -80,31 +79,36 @@ expr :
 
 %%
 
-// Search the array of variables for name; if found, assign new value to it
-// If not found, create new variable in array then assign new value
-void assign_var_value(char* var_name, int value)
+// Called for var_name = value operations
+// Searches the array of vars for var_name; if found, assigns value to it and returns assigned value
+// If var_name doesn't exist, create var_name in array, assign new value, return assigned value
+int var_assignemnt(char* var_name, int value)
 {
+	// Search vars to see if var_name was already created
 	int i = 0;
 	for(i = 0; i < num_vars; i++)
 	{
 		if (strcmp(vars[i].name, var_name) == 0)
 		{
 			vars[i].value = value;
-			return;
+			return vars[i].value;	// Return newly assigned value
 		}
 	}
 
+	// Try to add new var_name to the array
 	i = create_var(var_name);
-	if (i != -1)
+	if (i >= 0)
 	{
 		vars[i].value = value;
+		return vars[i].value;
 	}
 
-	return;
+	print_var_create_error(i);
+	return 0;
 }
 
 // Returns the value of the variable
-// If variable doesn't exist, create it with a value of zero
+// If variable wasn't declared previously, create it with a value of zero
 int get_var_value(char *var_name)
 {
 	int i = 0;
@@ -117,25 +121,22 @@ int get_var_value(char *var_name)
 	}
 
 	i = create_var(var_name);
-	if (i != -1)
+	if (i >= 0)
 	{
 		return vars[i].value;	// This should always be zero
 	}
-	else
-	{
-		return 0;	// Return 0 even if a new var couldn't be made
-	}
+
+	print_var_create_error(i);
+	return 0;	// Return 0 even if a new var couldn't be made
 }
 
 // Attempts to add a new variable to the vars array
-// Never called directly by grammar rules
 // Returns index of new variable in array if successful
-// Returns -1 if there was an error
+// Returns negative number if there was an error
 int create_var(char *var_name)
 {
 	if (num_vars >= MAX_NUM_VARS)
 	{
-		yyerror("Max number of variables allocated!");
 		return -1;
 	}
 
@@ -143,8 +144,7 @@ int create_var(char *var_name)
 
 	if(len > MAX_VAR_NAME_LEN)
 	{
-		yyerror("Variable name exceeds max allowed length.");
-		return -1;
+		return -2;
 	}
 
 	strncpy(vars[num_vars].name, var_name, len);
@@ -152,6 +152,22 @@ int create_var(char *var_name)
 	num_vars++;
 
 	return num_vars - 1;
+}
+
+// Handle to decode errors and print error message
+void print_var_create_error(int error)
+{
+	switch(error)
+	{
+		case -1:
+			yyerror("Max number of variables already declared");
+			break;
+		case -2:
+			yyerror("Variable name exceeds max length");
+			break;
+		default:
+			yyerror("Unknown error code");
+	}
 }
 
 void yyerror(char *s)
