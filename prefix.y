@@ -17,7 +17,6 @@
 #define OPERAND 1
 #define OPERATOR 0
 
-
 int yylex(void);				// Will be generated in lex.yy.c by flex
 
 // Following are defined below in sub-routines section
@@ -27,7 +26,6 @@ int var_assignemnt(char *, int);
 int get_var_value(char *);
 int create_var(char *);
 void print_var_create_error(int);
-
 
 // Push and pop values to postfix and prefix stacks
 void push_int(int, int);
@@ -40,8 +38,6 @@ struct variable {						// Structure to hold a declared variable's data
 	char name[MAX_VAR_NAME_LEN + 1];	// Allocate space for max var name + \0
 	int value;
 };
-
-x=23*2+3*4/2
 
 struct variable vars[MAX_NUM_VARS];		// Holds declared variables
 int num_vars = 0;						// Current amount of variables declared
@@ -354,7 +350,6 @@ void print_prefix()
 		printf("%s ", prf_temp1);
 	}
 	printf("\n");
-
 
 	// Reset buffers for next operation
 	postfix_size = 0;
