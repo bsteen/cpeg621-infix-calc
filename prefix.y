@@ -84,6 +84,8 @@ statement:
 	expr					{ print_prefix(); printf("=%d\n", $1); }
 	| VARIABLE '=' expr		{
 							  push_str(POSTFIX, "=");
+							  push_str(POSTFIX, $1);
+							  print_prefix();
 							  printf("=%d\n", var_assignemnt($1, $3));
 							  free($1); // Must free the strdup string
 							}
@@ -213,15 +215,16 @@ void push_int(int buf_id, int i)
 
 // Add string to selected buffer
 // DO RANGE CHECK
-void push_str(int buf_id, char *c)
+void push_str(int buf_id, char *str)
 {
 	if (buf_id == POSTFIX){
-		strncpy(postfix_buf[postfix_size], c, MAX_VAR_NAME_LEN + 1);
+		strncpy(postfix_buf[postfix_size], str, MAX_VAR_NAME_LEN + 1);
 		postfix_size++;
 	}
 	else
 	{
-		strncpy(prefix_buf[prefix_size], c, MAX_VAR_NAME_LEN + 2);
+		/* printf("pushing: %s\n", str); */
+		strncpy(prefix_buf[prefix_size], str, MAX_VAR_NAME_LEN + 2);
 		prefix_size++;
 	}
 }
@@ -230,22 +233,24 @@ void push_str(int buf_id, char *c)
 // Only works on prefix buffer; postfix won't need this function
 // DO RANGE CHECK
 void pop(char *top_value){
-	strncpy(top_value, prefix_buf[prefix_size], MAX_VAR_NAME_LEN + 2);
+	strncpy(top_value, prefix_buf[prefix_size - 1], MAX_VAR_NAME_LEN + 2);
+	/* printf("popped: %s\n", top_value); */
 	prefix_size--;
 }
 
 // Identify whether string is an operator, unary operator, operand
 int idenify_type(char *c)
-{	
-	if(strcmp(top_value, "+") == 0
-		|| strcmp(top_value, "-") == 0
-		|| strcmp(top_value, "*") == 0
-		|| strcmp(top_value, "/") == 0
-		|| strcmp(top_value, "**") == 0)
+{
+	if(strcmp(c, "=") == 0
+		|| strcmp(c, "+") == 0
+		|| strcmp(c, "-") == 0
+		|| strcmp(c, "*") == 0
+		|| strcmp(c, "/") == 0
+		|| strcmp(c, "**") == 0)
 	{
 		return OPERATOR;
 	}
-	else if(strcmp(top_value, "!") == 0)
+	else if(strcmp(c, "!") == 0)
 	{
 		return UNARY;
 	}
@@ -259,44 +264,44 @@ int idenify_type(char *c)
 void print_prefix()
 {
 	int i;
-	printf("POSTFIX: ");
+	printf("POSTFIX:");
 	for(i = 0; i < postfix_size; i++)
 	{
 		printf("%s ", postfix_buf[i]);
 	}
 	printf("\n");
 
-	char pof_temp[MAX_VAR_NAME_LEN + 1];
 	char prf_temp1[MAX_VAR_NAME_LEN + 2];
 	char prf_temp2[MAX_VAR_NAME_LEN + 2];
 	int type;
-	
+
 	for(i = 0; i < postfix_size; i++)
 	{
-		pof_temp = postfix_buf[i];
-		type = idenify_type(pof_temp);
-		printf("%d %s\n", type, pof_temp);
-		
+		type = idenify_type(postfix_buf[i]);
+
 		if(type == OPERATOR)
 		{
-			pop(prf_temp1);			// Will be operand
-			pop(prf_temp2);			// Will be also operand			
-			push_str(PREFIX, pof_temp);		// Push operator
+			pop(prf_temp1);			
+			pop(prf_temp2);	
+			
+			push_str(PREFIX, postfix_buf[i]);		// Push operator
 			push_str(PREFIX, prf_temp2);	// Push back 2 operands in reverse order
 			push_str(PREFIX, prf_temp1);
 		}
 		else if (type == UNARY)
 		{
 			pop(prf_temp1);
-			push_str(PREFIX, '!' + prf_temp1); // MAX_VAR_NAME_LEN + 2 is needed here
+			char unary_temp[MAX_VAR_NAME_LEN + 2] = "!";
+			strcat(unary_temp, prf_temp1);
+			push_str(PREFIX, unary_temp); // MAX_VAR_NAME_LEN + 2 is needed here
 		}
 		else	// type == OPERAND
 		{
-			push_str(PREFIX, prf_temp1);
+			push_str(PREFIX, postfix_buf[i]);
 		}
 	}
 
-	printf("PREFIX: ");
+	printf("PREFIX :");
 	for(i = 0; i < prefix_size; i++)
 	{
 		printf("%s ", prefix_buf[i]);
