@@ -3,7 +3,7 @@
 // CPEG 621 - Lab 1, part 2
 #include <stdlib.h> // for atoi call
 #include <string.h>
-#include "infix.tab.h"
+#include "prefix.tab.h"
 
 //#define DEBUG 			// for debugging: print tokens and their line numbers
 extern int lineNum; 	// line number from cal.tab.c

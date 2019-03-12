@@ -4,9 +4,12 @@
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
-#define MAX_NUM_VARS 30			// Max number of declared variables allowed
+
+#define MAX_NUM_VARS 30			// Max number of declared variables allowed in calculator
 #define MAX_VAR_NAME_LEN 20 	// How long a variable name can be
-#define MAX_FIX_SIZE 1000	// Max size of postfix and prefix buffer
+#define MAX_FIX_SIZE 200		// Max size of postfix and prefix buffers
+
+// Identifiers
 #define POSTFIX 1
 #define PREFIX 0
 #define UNARY 2
@@ -28,7 +31,7 @@ void print_var_create_error(int);
 // Push and pop values to postfix and prefix stacks
 void push_int(int, int);
 void push_str(int, char *);
-void pop(char*);
+int pop(char*);
 int idenify_type(char *c);
 void print_prefix();
 
@@ -43,8 +46,8 @@ int lineNum = 1;						// Used for debugging
 
 char postfix_buf[MAX_FIX_SIZE][MAX_VAR_NAME_LEN + 1];
 int postfix_size = 0;
-char prefix_buf[MAX_FIX_SIZE][MAX_VAR_NAME_LEN + 2]; // Can have unary ! + var name
-int prefix_size = 0;
+char prefix_stack[MAX_FIX_SIZE][MAX_FIX_SIZE]; // TO DO: MAKE THIS ARRAY OF POINTERS TO STRINGS
+int prefix_sp = 0;
 
 %}
 
@@ -83,8 +86,8 @@ infix :
 statement:
 	expr					{ print_prefix(); printf("=%d\n", $1); }
 	| VARIABLE '=' expr		{
-							  push_str(POSTFIX, "=");
 							  push_str(POSTFIX, $1);
+							  push_str(POSTFIX, "=");
 							  print_prefix();
 							  printf("=%d\n", var_assignemnt($1, $3));
 							  free($1); // Must free the strdup string
@@ -207,8 +210,8 @@ void push_int(int buf_id, int i)
 	}
 	else
 	{
-		sprintf(prefix_buf[prefix_size], "%d", i);
-		prefix_size++;
+		sprintf(prefix_stack[prefix_sp], "%d", i);
+		prefix_sp++;
 	}
 
 }
@@ -224,21 +227,27 @@ void push_str(int buf_id, char *str)
 	else
 	{
 		/* printf("pushing: %s\n", str); */
-		strncpy(prefix_buf[prefix_size], str, MAX_VAR_NAME_LEN + 2);
-		prefix_size++;
+		strncpy(prefix_stack[prefix_sp], str, MAX_FIX_SIZE);
+		prefix_sp++;
 	}
 }
 
-// Saves top value and type popped off prefix stack
-// Only works on prefix buffer; postfix won't need this function
-// DO RANGE CHECK
-void pop(char *top_value){
-	strncpy(top_value, prefix_buf[prefix_size - 1], MAX_VAR_NAME_LEN + 2);
+// Stores top value popped off prefix stack to top_value
+// Only works on prefix stack; postfix won't need this function
+// Returns 1 if success, 0 if there is no more data to pop.
+int pop(char *top_value){
+	if(prefix_sp <= 0)
+	{
+		return 0;
+	}
+
+	strncpy(top_value, prefix_stack[prefix_sp - 1], MAX_FIX_SIZE);
 	/* printf("popped: %s\n", top_value); */
-	prefix_size--;
+	prefix_sp--;
+	return 1;
 }
 
-// Identify whether string is an operator, unary operator, operand
+// Identify whether string is an operator, unary operator, or operand
 int idenify_type(char *c)
 {
 	if(strcmp(c, "=") == 0
@@ -260,7 +269,7 @@ int idenify_type(char *c)
 	}
 }
 
-// Takes the postfix_buf and converts it to prefix notation
+// Takes the postfix_buf and prints out converted prefix notation
 void print_prefix()
 {
 	int i;
@@ -271,46 +280,57 @@ void print_prefix()
 	}
 	printf("\n");
 
-	char prf_temp1[MAX_VAR_NAME_LEN + 2];
-	char prf_temp2[MAX_VAR_NAME_LEN + 2];
+ 	char prf_temp1[MAX_FIX_SIZE];
+	char prf_temp2[MAX_FIX_SIZE];
+	char prf_temp3[MAX_FIX_SIZE];
 	int type;
 
+	// Loop through postfix data, left to right
 	for(i = 0; i < postfix_size; i++)
 	{
+		// Determine the type of value from postfix
 		type = idenify_type(postfix_buf[i]);
 
 		if(type == OPERATOR)
 		{
-			pop(prf_temp1);			
-			pop(prf_temp2);	
+			// Pop top 2 values from prefix stack
+			pop(prf_temp1);
+			pop(prf_temp2);
 			
-			push_str(PREFIX, postfix_buf[i]);		// Push operator
-			push_str(PREFIX, prf_temp2);	// Push back 2 operands in reverse order
-			push_str(PREFIX, prf_temp1);
+			// Concatenate operator + 2nd value + first value
+			sprintf(prf_temp3, "%s ", postfix_buf[i]);
+			strcat(prf_temp3, prf_temp2);
+			strcat(prf_temp3, prf_temp1);
+			
+			// Push new string back to stack
+			push_str(PREFIX, prf_temp3);
 		}
 		else if (type == UNARY)
 		{
-			pop(prf_temp1);
+		// TO DO!!!!!
+		/* 	pop(prf_temp1);
 			char unary_temp[MAX_VAR_NAME_LEN + 2] = "!";
 			strcat(unary_temp, prf_temp1);
-			push_str(PREFIX, unary_temp); // MAX_VAR_NAME_LEN + 2 is needed here
+			push_str(PREFIX, unary_temp); // MAX_VAR_NAME_LEN + 2 is needed here */
 		}
-		else	// type == OPERAND
+		else	// type == OPERAND, push value to prefix stack
 		{
-			push_str(PREFIX, postfix_buf[i]);
+			sprintf(prf_temp1, "%s ", postfix_buf[i]);
+			push_str(PREFIX, prf_temp1);
 		}
 	}
 
 	printf("PREFIX :");
-	for(i = 0; i < prefix_size; i++)
+	while(pop(prf_temp1))
 	{
-		printf("%s ", prefix_buf[i]);
+		printf("%s ", prf_temp1);
 	}
 	printf("\n");
 
+
 	// Reset buffers for next operation
 	postfix_size = 0;
-	prefix_size = 0;
+	prefix_sp = 0;
 
 	return;
 }
