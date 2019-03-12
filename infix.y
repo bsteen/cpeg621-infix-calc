@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
-#define MAX_NUM_VARS 2			// Max number of declared variables allowed
+#define MAX_NUM_VARS 30			// Max number of declared variables allowed
 #define MAX_VAR_NAME_LEN 20 	// How long a variable name can be
 
 int yylex(void);						// Will be generated in lex.yy.c by flex
