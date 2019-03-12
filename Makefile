@@ -1,6 +1,8 @@
 # Benjamin Steenkamer
 # CPEG 621, Lab 1
 
+default: prefix
+
 # For making part 1, infix calculator
 infix: infix.l infix.y
 	bison -d infix.y
