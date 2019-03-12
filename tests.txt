@@ -1,0 +1,29 @@
+Test values for prefix output:
+
+infix: (a + b) * c + d / (e + f * g) - h
+postfix: a b + c * d e f g * + / + h -
+prefix: - + * + a b c / d + e * f g h
+
+infix: a + ((b - c * d) / e ) + f - g / h
+postfix: a b c d * - e / + f + g h / -
+prefix: - + + a / - b * c d e f / g h
+
+infix: (a * b + c) / d - e / (f + g)
+postfix: a b * c + d / e f g + / - 
+prefix: - / + * a b c d / e + f g
+
+infix: a - b - c * (d + e / f - g) - h
+postfix: a b - c d e f / + g - * - h -
+prefix: - - - a b * c - + d / e f g h 
+
+Infix Expression 	Prefix Expression 	Postfix Expression
+a + b * c + d 		+ + a * b c d 		a b c * + d +
+(a + b) * (c + d) 	* + a b + c d 		a b + c d + *
+a * b + c * d 		+ * a b * c d 		a b * c d * +
+a + b + c + d 		+ + + a b c d 		a b + c + d +
+
+infix notation						prefix notation
+a*b+c								+ * a b c
+a*(b+c)								* a + b c
+a*b+c*d								+ * a b * c d
+a*(b+c)*d							* * a + b c d

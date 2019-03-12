@@ -13,6 +13,7 @@
 #define POSTFIX 1
 #define PREFIX 0
 #define UNARY 2
+#define EQUALS 3
 #define OPERAND 1
 #define OPERATOR 0
 
@@ -39,6 +40,8 @@ struct variable {						// Structure to hold a declared variable's data
 	char name[MAX_VAR_NAME_LEN + 1];	// Allocate space for max var name + \0
 	int value;
 };
+
+x=23*2+3*4/2
 
 struct variable vars[MAX_NUM_VARS];		// Holds declared variables
 int num_vars = 0;						// Current amount of variables declared
@@ -250,8 +253,7 @@ int pop(char *top_value){
 // Identify whether string is an operator, unary operator, or operand
 int idenify_type(char *c)
 {
-	if(strcmp(c, "=") == 0
-		|| strcmp(c, "+") == 0
+	if(strcmp(c, "+") == 0
 		|| strcmp(c, "-") == 0
 		|| strcmp(c, "*") == 0
 		|| strcmp(c, "/") == 0
@@ -263,6 +265,8 @@ int idenify_type(char *c)
 	{
 		return UNARY;
 	}
+	else if(strcmp(c, "=") == 0)
+		return EQUALS;
 	else
 	{
 		return OPERAND;	// an integer or variable
@@ -321,6 +325,21 @@ void print_prefix()
 			
 			strcat(prf_temp3, prf_temp1);
 			push_str(PREFIX, prf_temp3);
+		}
+		else if(type == EQUALS)
+		{
+			// Pop top 2 values from prefix stack
+			pop(prf_temp1);
+			pop(prf_temp2);
+			
+			// Concatenate operator + first value + second value
+			sprintf(prf_temp3, "%s ", postfix_buf[i]);
+			strcat(prf_temp3, prf_temp1);
+			strcat(prf_temp3, prf_temp2);
+			
+			// Push new string back to stack
+			push_str(PREFIX, prf_temp3);
+			
 		}
 		else	// type == OPERAND, push value to prefix stack
 		{
