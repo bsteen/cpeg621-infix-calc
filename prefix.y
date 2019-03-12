@@ -22,7 +22,7 @@ int yylex(void);				// Will be generated in lex.yy.c by flex
 // Following are defined below in sub-routines section
 void yyerror(char *);
 //Used for infix calculator
-int var_assignemnt(char *, int);
+int var_assignment(char *, int);
 int get_var_value(char *);
 int create_var(char *);
 void print_var_create_error(int);
@@ -88,7 +88,7 @@ statement:
 							  push_str(POSTFIX, $1);
 							  push_str(POSTFIX, "=");
 							  print_prefix();
-							  printf("=%d\n", var_assignemnt($1, $3));
+							  printf("=%d\n", var_assignment($1, $3));
 							  free($1); // Must free the strdup string
 							}
 	;
@@ -110,7 +110,7 @@ expr :
 // Called for var_name = value operations
 // Searches the array of vars for var_name; if found, assigns value to it and returns assigned value
 // If var_name doesn't exist, create var_name in array, assign new value, return assigned value
-int var_assignemnt(char* var_name, int value)
+int var_assignment(char* var_name, int value)
 {
 	// Search vars to see if var_name was already created
 	int i = 0;
@@ -225,7 +225,6 @@ void push_str(int buf_id, char *str)
 	}
 	else
 	{
-		/* printf("pushing: %s\n", str); */
 		strncpy(prefix_stack[prefix_sp], str, MAX_FIX_SIZE);
 		prefix_sp++;
 	}
@@ -273,7 +272,7 @@ int idenify_type(char *c)
 void print_prefix()
 {
 	int i;
-	printf("POSTFIX:");
+	printf("POSTFIX: ");
 	for(i = 0; i < postfix_size; i++)
 	{
 		printf("%s ", postfix_buf[i]);
@@ -344,7 +343,7 @@ void print_prefix()
 		}
 	}
 
-	printf("PREFIX :");
+	printf("PREFIX : ");
 	while(pop(prf_temp1))
 	{
 		printf("%s ", prf_temp1);
