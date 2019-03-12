@@ -101,8 +101,8 @@ expr :
 	| expr '-' expr   { $$ = $1 - $3; push_str(POSTFIX, "-"); }
 	| expr '*' expr   { $$ = $1 * $3; push_str(POSTFIX, "*"); }
 	| expr '/' expr   { $$ = $1 / $3; push_str(POSTFIX, "/"); }
-	| expr POWER expr { $$ = (int)pow($1, $3); push_str(POSTFIX, "**"); }
 	| '!' expr		  { $$ = ~$2; push_str(POSTFIX, "!"); }
+	| expr POWER expr { $$ = (int)pow($1, $3); push_str(POSTFIX, "**"); }
 	| '(' expr ')'    { $$ = $2; }	// Will give syntax error for unmatched parens
 	;
 
@@ -305,13 +305,22 @@ void print_prefix()
 			// Push new string back to stack
 			push_str(PREFIX, prf_temp3);
 		}
-		else if (type == UNARY)
+		else if (type == UNARY)		// Determine if space or no space between ! and next value
 		{
-		// TO DO!!!!!
-		/* 	pop(prf_temp1);
-			char unary_temp[MAX_VAR_NAME_LEN + 2] = "!";
-			strcat(unary_temp, prf_temp1);
-			push_str(PREFIX, unary_temp); // MAX_VAR_NAME_LEN + 2 is needed here */
+			pop(prf_temp1);								// Get prefix stack element
+			sprintf(prf_temp2, "%c", prf_temp1[0]); 	// Get the first value from stack element
+			
+			if (idenify_type(prf_temp2) == OPERAND)		// Determine first value's type
+			{
+				sprintf(prf_temp3, "%s", postfix_buf[i]);	// Makes unary appear as: !x
+			}
+			else
+			{
+				sprintf(prf_temp3, "%s ", postfix_buf[i]); // Makes unary appear as: ! +
+			}
+			
+			strcat(prf_temp3, prf_temp1);
+			push_str(PREFIX, prf_temp3);
 		}
 		else	// type == OPERAND, push value to prefix stack
 		{
