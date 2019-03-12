@@ -1,12 +1,19 @@
 # Benjamin Steenkamer
 # CPEG 621, Lab 1
 
-# For making part 1 infix calculator
+# For making part 1, infix calculator
 infix: infix.l infix.y
 	bison -d infix.y
 	flex infix.l
 	gcc lex.yy.c infix.tab.c -o infix -lm
 	./infix
+	
+# For making part 2, prefix generator
+prefix: prefix.l prefix.y
+	bison -d prefix.y
+	flex prefix.l
+	gcc lex.yy.c prefix.tab.c -o prefix -lm
+	./prefix
 	
 # Make provided, basic calculator
 cal: lex.yy.o cal.tab.o
@@ -19,4 +26,4 @@ cal.tab.o: cal.y
 	bison -d cal.y; gcc -c cal.tab.c
 
 clean:
-	rm -f *.o *.c *.h cal infix
+	rm -f *.o *.c *.h cal infix prefix

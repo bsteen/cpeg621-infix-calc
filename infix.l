@@ -1,21 +1,23 @@
 %{
+// Benjamin Steenkamer
+// CPEG 621 - Lab 1, part 1
 #include <stdlib.h> // for atoi call
+#include <string.h>
 #include "infix.tab.h"
 
-//#define DEBUG 		// for debugging: print tokens and their line numbers
-
+#define DEBUG 		// for debugging: print tokens and their line numbers
 extern int lineNum; 	// line number from cal.tab.c
 void yyerror(char *);	// Defined in infix.y
 %}
 
 %%
 
-[a-z] {
+[a-z][A-Za-z0-9]* {
 	#ifdef DEBUG
 	printf("token %s at line %d\n", yytext, lineNum);
 	#endif
 
-	yylval = *yytext - 'a';
+	yylval.str = strdup(yytext); // Must be freed in bison grammar rules
 	return VARIABLE;
 	}
 
@@ -24,19 +26,19 @@ void yyerror(char *);	// Defined in infix.y
 	printf("token %s at line %d\n", yytext, lineNum);
 	#endif
 
-	yylval = atoi(yytext);
+	yylval.val = atoi(yytext);
 	return INTEGER;
 	}
 
 "**" {
 	#ifdef DEBUG
-	printf("token ** at line %d\n", lineNum);
+	printf("token %s at line %d\n", yytext, lineNum);
 	#endif
 
 	return POWER;
 	}
 
-[-+()=/*!] {
+[-+()=*/!] {
 		#ifdef DEBUG
 		printf("token %s at line %d\n", yytext, lineNum);
 		#endif
