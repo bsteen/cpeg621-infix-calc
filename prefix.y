@@ -6,8 +6,8 @@
 #include <math.h>
 
 #define MAX_NUM_VARS 30			// Max number of declared variables allowed in calculator
-#define MAX_VAR_NAME_LEN 20 	// How long a variable name can be
-#define MAX_FIX_SIZE 200		// Max size of postfix and prefix buffers
+#define MAX_VAR_NAME_LEN 20 	// How long a variable name can be; must be at least 10
+#define MAX_FIX_SIZE 200		// Max size of postfix buf and prefix stack; must be >> MAX_VAR_NAME_LEN
 
 // Identifiers
 #define POSTFIX 1
@@ -43,10 +43,10 @@ struct variable vars[MAX_NUM_VARS];		// Holds declared variables
 int num_vars = 0;						// Current amount of variables declared
 int lineNum = 1;						// Used for debugging
 
-char postfix_buf[MAX_FIX_SIZE][MAX_VAR_NAME_LEN + 1];
-int postfix_size = 0;
-char prefix_stack[MAX_FIX_SIZE][MAX_FIX_SIZE]; 
-int prefix_sp = 0;						// Points to the top the stack 
+char postfix_buf[MAX_FIX_SIZE][MAX_VAR_NAME_LEN + 1]; 	// Element must hold symbol, integer, or var name
+int postfix_size = 0;						// Number of elements in postfix buffer
+char prefix_stack[MAX_FIX_SIZE][MAX_FIX_SIZE];
+int prefix_sp = 0;							// Points to the top the stack (one index above top element)
 
 %}
 
@@ -182,7 +182,7 @@ int create_var(char *var_name)
 	return num_vars - 1;
 }
 
-// Handle to decode errors and print error message
+// Helper function to decode errors and print error message
 void print_var_create_error(int error)
 {
 	switch(error)
@@ -196,37 +196,76 @@ void print_var_create_error(int error)
 		default:
 			yyerror("Unknown error code");
 	}
+	return;
 }
 
 
 // Push integer (converted to string) to the selected buffer
-// DO RANGE CHECK
 void push_int(int buf_id, int i)
 {
-	if (buf_id == POSTFIX){
-		sprintf(postfix_buf[postfix_size], "%d", i);
-		postfix_size++;
-	}
-	else
+	if (buf_id == POSTFIX)
 	{
-		sprintf(prefix_stack[prefix_sp], "%d", i);
-		prefix_sp++;
+		if(postfix_size >= MAX_FIX_SIZE)
+		{
+			yyerror("push_int: postfix_buf is full (MAX_FIX_SIZE elements)");
+			return;
+		}
+		
+		sprintf(postfix_buf[postfix_size], "%d", i);	// signed 32-bit int is max 10 characters
+		postfix_size++;
+		return;
 	}
-
+	else	// Push to prefix stack
+	{
+		if(prefix_sp >= MAX_FIX_SIZE)
+		{
+			yyerror("push_int: prefix_stack is full (MAX_FIX_SIZE elements)");
+			return;
+		}
+		
+		sprintf(prefix_stack[prefix_sp], "%d", i); // signed 32-bit int is max 10 characters
+		prefix_sp++;
+		return;
+	}
 }
 
 // Add string to selected buffer
-// DO RANGE CHECK
 void push_str(int buf_id, char *str)
 {
 	if (buf_id == POSTFIX){
+		if(postfix_size >= MAX_FIX_SIZE)
+		{
+			yyerror("push_str: postfix_buf is full (MAX_FIX_SIZE elements)");
+			return;
+		}
+		
+		// String size check not need here because MAX_VAR_NAME_LEN enforces
+		// proper length of items being pushed onto postfix_buf
+		
 		strncpy(postfix_buf[postfix_size], str, MAX_VAR_NAME_LEN + 1);
 		postfix_size++;
+		return;
 	}
 	else
 	{
+		if(prefix_sp >= MAX_FIX_SIZE)
+		{
+			yyerror("push_str: prefix_stack is full (MAX_FIX_SIZE elements)");
+			return;
+		}
+		else if (strlen(str) >= MAX_FIX_SIZE) // accounting for null terminator in comparison
+		{
+			yyerror("push_str: prefix stack element is too large, symbols will be lost");
+			// During the conversion between postfix to prefix, elements on the 
+			// stack are popped, concatenated, and then push back onto the stack. If this 
+			// newly created element is larger than the fixed stack element size,
+			// strncpy will cut off data to prevent buffer overflow.
+			str[MAX_FIX_SIZE] = '\0'; // Add null terminator, as original one will be cut off
+		}
+		
 		strncpy(prefix_stack[prefix_sp], str, MAX_FIX_SIZE);
 		prefix_sp++;
+		return;
 	}
 }
 
@@ -238,9 +277,8 @@ int pop(char *top_value){
 	{
 		return 0;
 	}
-
+	
 	strncpy(top_value, prefix_stack[prefix_sp - 1], MAX_FIX_SIZE);
-	/* printf("popped: %s\n", top_value); */
 	prefix_sp--;
 	return 1;
 }
@@ -269,15 +307,18 @@ int idenify_type(char *c)
 }
 
 // Takes the postfix_buf and prints out converted prefix notation
+// Uses a stack and concatenation method for the conversion
 void print_prefix()
 {
 	int i;
-	printf("POSTFIX: ");
-	for(i = 0; i < postfix_size; i++)
-	{
-		printf("%s ", postfix_buf[i]);
-	}
-	printf("\n");
+	
+	// Print of Postfix buffer; useful for debugging
+	// printf("POSTFIX: ");
+	// for(i = 0; i < postfix_size; i++)
+	// {
+		// printf("%s ", postfix_buf[i]);
+	// }
+	// printf("\n");
 
  	char prf_temp1[MAX_FIX_SIZE];
 	char prf_temp2[MAX_FIX_SIZE];
@@ -306,10 +347,10 @@ void print_prefix()
 		}
 		else if (type == UNARY)		// Determine if space or no space between ! and next value
 		{
-			pop(prf_temp1);								// Get prefix stack element
-			sprintf(prf_temp2, "%c", prf_temp1[0]); 	// Get the first value from stack element
+			pop(prf_temp1);									// Get prefix stack element
+			sprintf(prf_temp2, "%c", prf_temp1[0]); 		// Get the first value from stack element
 			
-			if (idenify_type(prf_temp2) == OPERAND)		// Determine first value's type
+			if (idenify_type(prf_temp2) == OPERAND)			// Determine first value's type
 			{
 				sprintf(prf_temp3, "%s", postfix_buf[i]);	// Makes unary appear as: !x
 			}
@@ -343,7 +384,7 @@ void print_prefix()
 		}
 	}
 
-	printf("PREFIX : ");
+	// printf("PREFIX : ");
 	while(pop(prf_temp1))
 	{
 		printf("%s ", prf_temp1);
@@ -365,6 +406,26 @@ void yyerror(char *s)
 int main()
 {
 	memset(vars, 0, sizeof(int) * MAX_NUM_VARS);	// Initialize variables to zero
+	
+	if(MAX_FIX_SIZE <= MAX_VAR_NAME_LEN)
+	{
+		yyerror("Error: To prevent buffer copy overflow, MAX_FIX_SIZE must be > MAX_VAR_NAME_LEN");
+		// If not caught, this overflow would happen when variable names are pushed to prefix stack,
+		// and when long prefix stack elements are created via concatenation
+		return 0;
+	}
+	
+	if (MAX_VAR_NAME_LEN < 10)
+	{
+		yyerror("Error: Variables should be allowed to be AT LEAST 10 characters long (MAX_VAR_NAME_LEN)");
+		return 0;
+		// The postfix buffer stores symbols, var names, and ints in a buffer.
+		// The buffer needs to be at least 10 + null characters long to store 32-bit signed ints as strings.
+		// To simplify the logic, the buffer indexes therefore need to be at least 10,
+		// so var names might as well be be a minimum of 10 + null characters long.
+		// The extra space for '\0' is accounted for in the allocation.
+	}
+	
 	yyparse();
 	return 0;
 }
