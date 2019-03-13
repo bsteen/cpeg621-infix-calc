@@ -354,7 +354,7 @@ void print_prefix()
 			strncat_check(prf_temp3, prf_temp2);		// sprintfs b/c postfix_buf[] have smaller size
 			strncat_check(prf_temp3, prf_temp1);
 
-			// Push new string back to stack
+			// Push new string to stack
 			push_str(PREFIX, prf_temp3);
 		}
 		else if (type == UNARY)		// Determine if space or no space between ! and next value
@@ -397,7 +397,7 @@ void print_prefix()
 	}
 
 	// printf("PREFIX : ");
-	pop(prf_temp1); 		// Pop last element; Should be entire prefix notation
+	pop(prf_temp1); 		// Pop last element, should be entire prefix notation
 	printf("%s\n", prf_temp1);
 
 	// Reset buffers for next operation

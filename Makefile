@@ -8,14 +8,12 @@ infix: infix.l infix.y
 	bison -d infix.y
 	flex infix.l
 	gcc lex.yy.c infix.tab.c -o infix -lm
-	./infix
 	
 # For making part 2, prefix generator
 prefix: prefix.l prefix.y
 	bison -d prefix.y
 	flex prefix.l
 	gcc lex.yy.c prefix.tab.c -o prefix -lm
-	./prefix
 	
 # Make provided, basic calculator
 cal: lex.yy.o cal.tab.o
