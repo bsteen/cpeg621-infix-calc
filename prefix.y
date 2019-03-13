@@ -31,7 +31,9 @@ void print_var_create_error(int);
 void push_int(int, int);
 void push_str(int, char *);
 int pop(char*);
-int idenify_type(char *c);
+// For creating prefix output
+int idenify_type(char *);
+void strncat_check(char *, char*);
 void print_prefix();
 
 struct variable {						// Structure to hold a declared variable's data
@@ -210,7 +212,7 @@ void push_int(int buf_id, int i)
 			yyerror("push_int: postfix_buf is full (MAX_FIX_SIZE elements)");
 			return;
 		}
-		
+
 		sprintf(postfix_buf[postfix_size], "%d", i);	// signed 32-bit int is max 10 characters
 		postfix_size++;
 		return;
@@ -222,14 +224,14 @@ void push_int(int buf_id, int i)
 			yyerror("push_int: prefix_stack is full (MAX_FIX_SIZE elements)");
 			return;
 		}
-		
+
 		sprintf(prefix_stack[prefix_sp], "%d", i); // signed 32-bit int is max 10 characters
 		prefix_sp++;
 		return;
 	}
 }
 
-// Add string to selected buffer
+// Add string to top of selected buffer
 void push_str(int buf_id, char *str)
 {
 	if (buf_id == POSTFIX){
@@ -238,10 +240,7 @@ void push_str(int buf_id, char *str)
 			yyerror("push_str: postfix_buf is full (MAX_FIX_SIZE elements)");
 			return;
 		}
-		
-		// String size check not need here because MAX_VAR_NAME_LEN enforces
-		// proper length of items being pushed onto postfix_buf
-		
+
 		strncpy(postfix_buf[postfix_size], str, MAX_VAR_NAME_LEN + 1);
 		postfix_size++;
 		return;
@@ -253,16 +252,8 @@ void push_str(int buf_id, char *str)
 			yyerror("push_str: prefix_stack is full (MAX_FIX_SIZE elements)");
 			return;
 		}
-		else if (strlen(str) >= MAX_FIX_SIZE) // accounting for null terminator in comparison
-		{
-			yyerror("push_str: prefix stack element is too large, symbols will be lost");
-			// During the conversion between postfix to prefix, elements on the 
-			// stack are popped, concatenated, and then push back onto the stack. If this 
-			// newly created element is larger than the fixed stack element size,
-			// strncpy will cut off data to prevent buffer overflow.
-			str[MAX_FIX_SIZE] = '\0'; // Add null terminator, as original one will be cut off
-		}
-		
+
+
 		strncpy(prefix_stack[prefix_sp], str, MAX_FIX_SIZE);
 		prefix_sp++;
 		return;
@@ -277,7 +268,7 @@ int pop(char *top_value){
 	{
 		return 0;
 	}
-	
+
 	strncpy(top_value, prefix_stack[prefix_sp - 1], MAX_FIX_SIZE);
 	prefix_sp--;
 	return 1;
@@ -306,12 +297,33 @@ int idenify_type(char *c)
 	}
 }
 
+
+// Concatenates two strings, but gives warning if the new string is too long
+void strncat_check(char *dest, char *src)
+{
+	int len_dest = strlen(dest);
+	int len_src = strlen(src);
+	int space_left = MAX_FIX_SIZE - len_dest - 1; // account for null term that will be added last
+	int chars_to_copy = space_left; // Amount of space left to copy src into
+
+	if (len_src > space_left)
+	{
+		yyerror("strncat_check: new stack element too large for buffer, symbols will be lost");
+		// During the conversion between postfix to prefix, elements on the
+		// stack are popped, concatenated, and then push back onto the stack. If this
+		// newly created element is larger than the fixed stack element size,
+		// strncat will cut off data to prevent buffer overflow.
+	}
+
+	strncat(dest, src, chars_to_copy);
+	return;
+}
 // Takes the postfix_buf and prints out converted prefix notation
 // Uses a stack and concatenation method for the conversion
 void print_prefix()
 {
 	int i;
-	
+
 	// Print of Postfix buffer; useful for debugging
 	// printf("POSTFIX: ");
 	// for(i = 0; i < postfix_size; i++)
@@ -336,12 +348,12 @@ void print_prefix()
 			// Pop top 2 values from prefix stack
 			pop(prf_temp1);
 			pop(prf_temp2);
-			
+
 			// Concatenate operator + 2nd value + first value
-			sprintf(prf_temp3, "%s ", postfix_buf[i]);
-			strcat(prf_temp3, prf_temp2);
-			strcat(prf_temp3, prf_temp1);
-			
+			sprintf(prf_temp3, "%s ", postfix_buf[i]);	// Don't need to bounds check on these
+			strncat_check(prf_temp3, prf_temp2);		// sprintfs b/c postfix_buf[] have smaller size
+			strncat_check(prf_temp3, prf_temp1);
+
 			// Push new string back to stack
 			push_str(PREFIX, prf_temp3);
 		}
@@ -349,7 +361,7 @@ void print_prefix()
 		{
 			pop(prf_temp1);									// Get prefix stack element
 			sprintf(prf_temp2, "%c", prf_temp1[0]); 		// Get the first value from stack element
-			
+
 			if (idenify_type(prf_temp2) == OPERAND)			// Determine first value's type
 			{
 				sprintf(prf_temp3, "%s", postfix_buf[i]);	// Makes unary appear as: !x
@@ -358,8 +370,8 @@ void print_prefix()
 			{
 				sprintf(prf_temp3, "%s ", postfix_buf[i]); // Makes unary appear as: ! +
 			}
-			
-			strcat(prf_temp3, prf_temp1);
+
+			strncat_check(prf_temp3, prf_temp1);
 			push_str(PREFIX, prf_temp3);
 		}
 		else if(type == EQUALS)
@@ -367,15 +379,15 @@ void print_prefix()
 			// Pop top 2 values from prefix stack
 			pop(prf_temp1);
 			pop(prf_temp2);
-			
+
 			// Concatenate operator + first value + second value
 			sprintf(prf_temp3, "%s ", postfix_buf[i]);
-			strcat(prf_temp3, prf_temp1);
-			strcat(prf_temp3, prf_temp2);
-			
+			strncat_check(prf_temp3, prf_temp1);
+			strncat_check(prf_temp3, prf_temp2);
+
 			// Push new string back to stack
 			push_str(PREFIX, prf_temp3);
-			
+
 		}
 		else	// type == OPERAND, push value to prefix stack
 		{
@@ -385,11 +397,8 @@ void print_prefix()
 	}
 
 	// printf("PREFIX : ");
-	while(pop(prf_temp1))
-	{
-		printf("%s ", prf_temp1);
-	}
-	printf("\n");
+	pop(prf_temp1); 		// Pop last element; Should be entire prefix notation
+	printf("%s\n", prf_temp1);
 
 	// Reset buffers for next operation
 	postfix_size = 0;
@@ -406,7 +415,7 @@ void yyerror(char *s)
 int main()
 {
 	memset(vars, 0, sizeof(int) * MAX_NUM_VARS);	// Initialize variables to zero
-	
+
 	if(MAX_FIX_SIZE <= MAX_VAR_NAME_LEN)
 	{
 		yyerror("Error: To prevent buffer copy overflow, MAX_FIX_SIZE must be > MAX_VAR_NAME_LEN");
@@ -414,7 +423,7 @@ int main()
 		// and when long prefix stack elements are created via concatenation
 		return 0;
 	}
-	
+
 	if (MAX_VAR_NAME_LEN < 10)
 	{
 		yyerror("Error: Variables should be allowed to be AT LEAST 10 characters long (MAX_VAR_NAME_LEN)");
@@ -425,7 +434,7 @@ int main()
 		// so var names might as well be be a minimum of 10 + null characters long.
 		// The extra space for '\0' is accounted for in the allocation.
 	}
-	
+
 	yyparse();
 	return 0;
 }
