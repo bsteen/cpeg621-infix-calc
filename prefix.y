@@ -45,8 +45,8 @@ int lineNum = 1;						// Used for debugging
 
 char postfix_buf[MAX_FIX_SIZE][MAX_VAR_NAME_LEN + 1];
 int postfix_size = 0;
-char prefix_stack[MAX_FIX_SIZE][MAX_FIX_SIZE]; // TO DO: MAKE THIS ARRAY OF POINTERS TO STRINGS
-int prefix_sp = 0;
+char prefix_stack[MAX_FIX_SIZE][MAX_FIX_SIZE]; 
+int prefix_sp = 0;						// Points to the top the stack 
 
 %}
 
@@ -73,12 +73,12 @@ int prefix_sp = 0;
 %precedence  '!'		// Unary bitwise not; No associativity b/c it is unary
 %right POWER			// ** exponent operator
 
-%start infix
+%start prefix
 
 %%
 
-infix :
-	infix statement '\n'
+prefix :
+	prefix statement '\n'
 	|
 	;
 

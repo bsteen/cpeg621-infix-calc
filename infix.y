@@ -8,8 +8,10 @@
 #define MAX_VAR_NAME_LEN 20 	// How long a variable name can be
 
 int yylex(void);						// Will be generated in lex.yy.c by flex
+
+// Following are defined below in sub-routines section
 void yyerror(char *);					// Following are defined below in sub-routines section
-int var_assignemnt(char *, int);
+int var_assignment(char *, int);
 int get_var_value(char *);
 int create_var(char *);
 void print_var_create_error(int);
@@ -21,8 +23,7 @@ struct variable {
 
 struct variable vars[MAX_NUM_VARS];		// Holds declared variables
 int num_vars = 0;						// Current amount of variables declared
-
-int lineNum = 1;
+int lineNum = 1;						// Used for debugging
 %}
 
 %token INTEGER POWER VARIABLE	// bison adds these #defines in infix.tab.h for use in flex
@@ -60,7 +61,7 @@ infix :
 statement:
 	expr					{ printf("=%d\n", $1); }
 	| VARIABLE '=' expr		{
-							  printf("=%d\n", var_assignemnt($1, $3));
+							  printf("=%d\n", var_assignment($1, $3));
 							  free($1); // Must free the strdup string
 							}
 	;
@@ -72,8 +73,8 @@ expr :
 	| expr '-' expr   { $$ = $1 - $3; }
 	| expr '*' expr   { $$ = $1 * $3; }
 	| expr '/' expr   { $$ = $1 / $3; }
-	| expr POWER expr { $$ = (int)pow($1, $3); }
 	| '!' expr		  { $$ = ~$2; }
+	| expr POWER expr { $$ = (int)pow($1, $3); }
 	| '(' expr ')'    { $$ = $2; }		// Will give syntax error for unmatched parens
 	;
 
@@ -82,7 +83,7 @@ expr :
 // Called for var_name = value operations
 // Searches the array of vars for var_name; if found, assigns value to it and returns assigned value
 // If var_name doesn't exist, create var_name in array, assign new value, return assigned value
-int var_assignemnt(char* var_name, int value)
+int var_assignment(char* var_name, int value)
 {
 	// Search vars to see if var_name was already created
 	int i = 0;
