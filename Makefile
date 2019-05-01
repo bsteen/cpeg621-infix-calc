@@ -13,7 +13,7 @@ infix: infix.l infix.y
 prefix: prefix.l prefix.y
 	bison -d prefix.y
 	flex prefix.l
-	gcc lex.yy.c prefix.tab.c -o prefix -lm
+	gcc -Wall lex.yy.c prefix.tab.c -o prefix -lm
 	
 # Make provided, basic calculator
 cal: lex.yy.o cal.tab.o
